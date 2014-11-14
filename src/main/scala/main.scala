@@ -1,4 +1,5 @@
 import scala.io.Source
+import scala.math.max
 
 import java.io.BufferedInputStream
 
@@ -20,6 +21,8 @@ import awscala._, s3._
 object MozillaTelemetry{
   implicit lazy val s3 = S3()
   implicit lazy val formats = DefaultFormats
+
+  val bucket = s3.bucket("telemetry-published-v2").get
 
   val filter =
     """
@@ -67,7 +70,6 @@ object MozillaTelemetry{
   }
 
   def readS3File(filename: String) = {
-    val bucket = s3.bucket("telemetry-published-v2").get
     val obj = s3.get(bucket, filename).get
     val stream = new BufferedInputStream(obj.getObjectContent)
     val compressedStream = new CompressorStreamFactory().createCompressorInputStream(CompressorStreamFactory.LZMA, stream)
@@ -81,7 +83,9 @@ object MozillaTelemetry{
     val sc = new SparkContext(conf)
 
     val filenames = getS3Filenames(filter)
-    val dataset = sc.parallelize(filenames).flatMap(filename => {
+    val parallelism = max(filenames.length / 16, sc.defaultParallelism)
+
+    val dataset = sc.parallelize(filenames, parallelism).flatMap(filename => {
       readS3File(filename)
     }) // repartition?
 
