@@ -18,6 +18,9 @@ import dispatch._, Defaults._
 import awscala._, s3._
 
 object MozillaTelemetry{
+  implicit lazy val s3 = S3()
+  implicit lazy val formats = DefaultFormats
+
   val filter =
     """
      { "filter":
@@ -54,8 +57,6 @@ object MozillaTelemetry{
      """
 
   def getS3Filenames(filter: String) = {
-    implicit lazy val formats = DefaultFormats
-
     val svc = url("http://ec2-54-203-209-235.us-west-2.compute.amazonaws.com:8080/files").POST
       .setBody(filter)
       .addHeader("Content-type", "application/json")
@@ -66,8 +67,6 @@ object MozillaTelemetry{
   }
 
   def readS3File(filename: String) = {
-    implicit lazy val s3 = S3()
-
     val bucket = s3.bucket("telemetry-published-v2").get
     val obj = s3.get(bucket, filename).get
     val stream = new BufferedInputStream(obj.getObjectContent)
@@ -92,8 +91,6 @@ object MozillaTelemetry{
   }
 
   def analysis(pings: RDD[String]) {
-    implicit lazy val formats = DefaultFormats
-
     ////////////////////////////////////////////////////////////////////////////
     // Your analysis code starts here
     ////////////////////////////////////////////////////////////////////////////
