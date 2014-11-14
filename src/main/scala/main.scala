@@ -79,7 +79,7 @@ object MozillaTelemetry{
   }
 
   def startAnalysis() {
-    val conf = new SparkConf().setAppName("mozilla-telemetry").setMaster("local[8]")
+    val conf = new SparkConf().setAppName("mozilla-telemetry").setMaster("local[*]")
     val sc = new SparkContext(conf)
 
     val filenames = getS3Filenames(filter)
