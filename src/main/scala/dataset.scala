@@ -1,0 +1,110 @@
+import scala.io.Source
+import scala.math.max
+
+import java.io.BufferedInputStream
+
+import org.apache.spark.SparkContext
+import org.apache.spark.SparkContext._
+import org.apache.spark.SparkConf
+import org.apache.spark.rdd.RDD
+
+import org.apache.commons.compress.compressors._
+
+import org.json4s._
+import org.json4s.jackson.JsonMethods._
+import org.json4s.JsonDSL.WithDouble._
+
+import dispatch._, Defaults._
+
+import awscala._, s3._
+
+package Mozilla {
+  package Telemetry{
+    object Pings {
+      def apply(appName: String, channel: String, version: Tuple2[String, String], buildid: Tuple2[String, String], submission: Tuple2[String, String]) = {
+        new Pings(appName, channel, version, buildid, submission)
+      }
+
+      def apply(appName: String, channel: String, version: String, buildid: String, submission: String) = {
+        new Pings(appName, channel, version, buildid, submission)
+      }
+    }
+
+    class Pings(appName: String, channel: String, version: Tuple2[String, String], buildid: Tuple2[String, String], submission: Tuple2[String, String]) extends Serializable{
+      implicit lazy val s3 = S3()
+      lazy val bucket = s3.bucket("telemetry-published-v2").get
+      val filter = s"""
+        { "filter":
+          {
+            "version": 1,
+            "dimensions": [
+              {
+                "field_name": "reason",
+                "allowed_values": ["saved-session"]
+              },
+              {
+                "field_name": "appName",
+                "allowed_values": ["Fennec"]
+              },
+              {
+                "field_name": "appUpdateChannel",
+                "allowed_values": ["nightly"]
+              },
+              {
+                "field_name": "appVersion",
+                "allowed_values": {"min": "${version._1}", "max": "${version._2}"}
+              },
+              {
+                "field_name": "appBuildID",
+                "allowed_values": {"min": "${buildid._1}", "max": "${buildid._2}"}
+              },
+              {
+                "field_name": "submission_date",
+                "allowed_values": {"min": "${submission._1}", "max": "${submission._2}"}
+              }
+            ]
+          }
+        }"""
+
+      def this(appName: String, channel: String, version: String, buildid: String, submission: String) = {
+        this(appName, channel, (version, version), (buildid, buildid), (submission, submission))
+      }
+
+      def filenames = {
+        implicit val formats = DefaultFormats
+
+        val svc = url("http://ec2-54-203-209-235.us-west-2.compute.amazonaws.com:8080/files").POST
+          .setBody(filter)
+          .addHeader("Content-type", "application/json")
+
+        try {
+          val req = Http(svc)
+          val JArray(jsonList) = parse(req().getResponseBody) \ "files"
+          jsonList.map(_.extract[String]).toArray
+        } catch {
+          case e: Exception => {
+            println("Warning, dataset is empty")
+            Array[String]()
+          }
+        }
+      }
+
+      def read(filename: String) = {
+        val obj = s3.get(bucket, filename).get
+        val stream = new BufferedInputStream(obj.getObjectContent)
+        val compressedStream = new CompressorStreamFactory().createCompressorInputStream(CompressorStreamFactory.LZMA, stream)
+        val content = Source.fromInputStream(compressedStream).getLines.toArray
+        compressedStream.close
+        content
+      }
+
+      def RDD()(implicit sc: SparkContext) = {
+        val parallelism = max(filenames.length / 16, sc.defaultParallelism)
+
+        sc.parallelize(filenames, parallelism).flatMap(filename => {
+          read(filename)
+        })
+      }
+    }
+  }
+}

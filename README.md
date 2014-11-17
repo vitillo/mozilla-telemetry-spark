@@ -1,6 +1,15 @@
+Mozilla Telemetry utilities for Spark
+=====================================
+
+This package provides an abstraction to access Telemetry pings as RDD.
+
+The following example prints the Operating System distribution of the selected pings.
+
+```scala
 import org.apache.spark.SparkContext
 import org.apache.spark.SparkContext._
 import org.apache.spark.SparkConf
+import org.apache.spark.rdd.RDD
 
 import org.json4s._
 import org.json4s.jackson.JsonMethods._
@@ -25,3 +34,4 @@ object Analysis{
     sc.stop()
   }
 }
+```
