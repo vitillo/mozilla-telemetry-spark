@@ -56,11 +56,11 @@ package Mozilla {
               },
               {
                 "field_name": "appName",
-                "allowed_values": ["Fennec"]
+                "allowed_values": ["$appName"]
               },
               {
                 "field_name": "appUpdateChannel",
-                "allowed_values": ["nightly"]
+                "allowed_values": ["$channel"]
               },
               {
                 "field_name": "appVersion",
