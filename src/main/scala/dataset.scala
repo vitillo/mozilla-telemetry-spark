@@ -96,11 +96,12 @@ package Mozilla {
         try {
           val req = Http(svc)
           val JArray(jsonList) = parse(req().getResponseBody) \ "files"
-          jsonList.map(_.extract[String]).toArray
+
+          jsonList.map(_.extract[String])
         } catch {
           case e: Exception => {
-            println("Warning, dataset is empty")
-            Array[String]()
+            println("Warning, no matches for filter")
+            List[String]()
           }
         }
       }
@@ -109,13 +110,15 @@ package Mozilla {
         val obj = s3.get(bucket, filename).get
         val stream = new BufferedInputStream(obj.getObjectContent)
         val compressedStream = new CompressorStreamFactory().createCompressorInputStream(CompressorStreamFactory.LZMA, stream)
-        val content = Source.fromInputStream(compressedStream).getLines.toArray
-        compressedStream.close
+        val source = Source.fromInputStream(compressedStream)
+        val content = source.getLines.toArray
+
+        source.close
         content
       }
 
       def RDD()(implicit sc: SparkContext) = {
-        val parallelism = max(filenames.length / 32, sc.defaultParallelism)
+        val parallelism = max(filenames.length / 16, sc.defaultParallelism)
 
         sc.parallelize(filenames, parallelism).flatMap(filename => {
           read(filename)
