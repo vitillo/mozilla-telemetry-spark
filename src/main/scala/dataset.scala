@@ -26,7 +26,19 @@ package Mozilla {
       }
 
       def apply(appName: String, channel: String, version: String, buildid: String, submission: String) = {
-        new Pings(appName, channel, version, buildid, submission)
+        new Pings(appName, channel, (version, version), (buildid, buildid), (submission, submission))
+      }
+
+      def apply(appName: String, channel: String, version: String, buildid: String, submission: Tuple2[String, String]) = {
+        new Pings(appName, channel, (version, version), (buildid, buildid), submission)
+      }
+
+      def apply(appName: String, channel: String, version: String, buildid: Tuple2[String, String], submission: String) = {
+        new Pings(appName, channel, (version, version), buildid, (submission, submission))
+      }
+
+      def apply(appName: String, channel: String, version: String, buildid: Tuple2[String, String], submission: Tuple2[String, String]) = {
+        new Pings(appName, channel, (version, version), buildid, submission)
       }
     }
 
@@ -52,22 +64,26 @@ package Mozilla {
               },
               {
                 "field_name": "appVersion",
-                "allowed_values": {"min": "${version._1}", "max": "${version._2}"}
+                "allowed_values": ${generateField(version)}
               },
               {
                 "field_name": "appBuildID",
-                "allowed_values": {"min": "${buildid._1}", "max": "${buildid._2}"}
+                "allowed_values": ${generateField(buildid)}
               },
               {
                 "field_name": "submission_date",
-                "allowed_values": {"min": "${submission._1}", "max": "${submission._2}"}
+                "allowed_values": ${generateField(submission)} 
               }
             ]
           }
         }"""
 
-      def this(appName: String, channel: String, version: String, buildid: String, submission: String) = {
-        this(appName, channel, (version, version), (buildid, buildid), (submission, submission))
+      def generateField(field: Tuple2[String, String]) = {
+        if(field._1 == "*" && field._2 == "*") {
+          """"*""""
+        } else {
+          s"""{"min": "${field._1}", "max": "${field._2}"}"""
+        }
       }
 
       def filenames = {
