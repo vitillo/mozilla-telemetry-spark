@@ -1,7 +1,7 @@
 Mozilla Telemetry utilities for Spark
 =====================================
 
-This package provides an abstraction to access Telemetry pings as RDD.
+This package provides an API to access Telemetry pings within a RDD.
 
 The following example prints the Operating System distribution of the selected pings.
 
