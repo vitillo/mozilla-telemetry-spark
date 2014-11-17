@@ -115,7 +115,7 @@ package Mozilla {
       }
 
       def RDD()(implicit sc: SparkContext) = {
-        val parallelism = max(filenames.length / 16, sc.defaultParallelism)
+        val parallelism = max(filenames.length / 32, sc.defaultParallelism)
 
         sc.parallelize(filenames, parallelism).flatMap(filename => {
           read(filename)
