@@ -21,7 +21,7 @@ object Analysis{
     implicit val sc = new SparkContext(conf)
     implicit lazy val formats = DefaultFormats
 
-    val pings = Pings("Fennec", "nightly", "36.0a1", "20141110030204", "20141110").RDD(0.1)
+    val pings = Pings("Firefox", "nightly", "36.0a1", "20141110030204", "20141110").RDD(0.1)
 
     var osdistribution = pings.map(line => {
       ((parse(line.substring(37)) \ "info" \ "OS").extract[String], 1)
