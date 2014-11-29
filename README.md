@@ -1,5 +1,5 @@
-Mozilla Telemetry utilities for Spark
-=====================================
+Mozilla Telemetry analysis starter kit for Spark
+================================================
 
 This package provides an API to load a set of Telemetry pings to a RDD.
 
